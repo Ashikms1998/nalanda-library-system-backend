@@ -68,3 +68,52 @@ export const deleteBook = async (req, res, next) => {
     next(error);
   }
 };
+
+
+//Book Stats Controllers
+
+export const getMostBorrowedBooks = async (req, res, next) => {
+  try {
+    const limit = parseInt(req.query.limit) || 10; //req.query.limit is a string from the URL tp convert we use parseInt
+
+    const mostBorrowedBooks = await BorrowingRecord.aggregate([
+      {
+        $group: {
+          _id: '$book',
+          borrowCount: { $sum: 1 }
+        }
+      },
+      { $sort: { borrowCount: -1 } },
+      { $limit: limit },
+      {
+        $lookup: {
+          from: 'books',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'bookDetails'
+        }
+      },
+      {
+        $unwind: '$bookDetails'
+      },
+      {
+        $project: {
+          _id: 0,
+          bookId: '$bookDetails._id',
+          title: '$bookDetails.title',
+          author: '$bookDetails.author',
+          genre: '$bookDetails.genre',
+          borrowCount: 1
+        }
+      }
+    ]);
+
+    res.status(200).json({
+      success: true,
+      count: mostBorrowedBooks.length,
+      data: mostBorrowedBooks
+    });
+  } catch (error) {
+    next(error);
+  }
+};
