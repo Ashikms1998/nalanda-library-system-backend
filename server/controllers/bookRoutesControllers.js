@@ -1,9 +1,15 @@
 import Book from "../models/Book.js";
-import { validationResult } from 'express-validator';
-import { addBook, deleteBookById, getAllBooks, updateBook } from "../services/bookServices.js";
+import { validationResult } from "express-validator";
+import {
+  addBook,
+  deleteBookById,
+  getAllBooks,
+  updateBook,
+} from "../services/bookServices.js";
+import BorrowingRecord from "../models/BorrowingRecord.js";
 
-export const getBooks = async (req, res,next) => {
-    try {
+export const getBooks = async (req, res, next) => {
+  try {
     const { page = 1, limit = 10, genre, author } = req.query;
 
     const filters = {};
@@ -16,25 +22,38 @@ export const getBooks = async (req, res,next) => {
   } catch (error) {
     next(error);
   }
-}
+};
 
-export const addNewBook = async (req, res,next) => {
+export const addNewBook = async (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
 
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
-    }
-
-    const { title, author, ISBN, publicationDate, genre, copies,availableCopies } = req.body;
-try {
-    const book = await addBook({ title, author, ISBN, publicationDate, genre, copies,availableCopies });
+  const {
+    title,
+    author,
+    ISBN,
+    publicationDate,
+    genre,
+    copies,
+    availableCopies,
+  } = req.body;
+  try {
+    const book = await addBook({
+      title,
+      author,
+      ISBN,
+      publicationDate,
+      genre,
+      copies,
+      availableCopies,
+    });
     res.status(201).json({ success: true, data: book });
   } catch (err) {
     next(err);
   }
-}
-
-
+};
 
 export const updateBookById = async (req, res, next) => {
   const errors = validationResult(req);
@@ -52,7 +71,6 @@ export const updateBookById = async (req, res, next) => {
   }
 };
 
-
 export const deleteBook = async (req, res, next) => {
   try {
     const bookId = req.params.id;
@@ -60,15 +78,18 @@ export const deleteBook = async (req, res, next) => {
     const deleted = await deleteBookById(bookId);
 
     if (!deleted) {
-      return res.status(404).json({ success: false, message: 'Book not found' });
+      return res
+        .status(404)
+        .json({ success: false, message: "Book not found" });
     }
 
-    res.status(200).json({ success: true, message: 'Book deleted successfully' });
+    res
+      .status(200)
+      .json({ success: true, message: "Book deleted successfully" });
   } catch (error) {
     next(error);
   }
 };
-
 
 //Book Stats Controllers
 
@@ -79,94 +100,131 @@ export const getMostBorrowedBooks = async (req, res, next) => {
     const mostBorrowedBooks = await BorrowingRecord.aggregate([
       {
         $group: {
-          _id: '$book',
-          borrowCount: { $sum: 1 }
-        }
+          _id: "$book",
+          borrowCount: { $sum: 1 },
+        },
       },
       { $sort: { borrowCount: -1 } },
       { $limit: limit },
       {
         $lookup: {
-          from: 'books',
-          localField: '_id',
-          foreignField: '_id',
-          as: 'bookDetails'
-        }
+          from: "books",
+          localField: "_id",
+          foreignField: "_id",
+          as: "bookDetails",
+        },
       },
       {
-        $unwind: '$bookDetails'
+        $unwind: "$bookDetails",
       },
       {
         $project: {
           _id: 0,
-          bookId: '$bookDetails._id',
-          title: '$bookDetails.title',
-          author: '$bookDetails.author',
-          genre: '$bookDetails.genre',
-          borrowCount: 1
-        }
-      }
+          bookId: "$bookDetails._id",
+          title: "$bookDetails.title",
+          author: "$bookDetails.author",
+          genre: "$bookDetails.genre",
+          borrowCount: 1,
+        },
+      },
     ]);
 
     res.status(200).json({
       success: true,
       count: mostBorrowedBooks.length,
-      data: mostBorrowedBooks
+      data: mostBorrowedBooks,
     });
   } catch (error) {
     next(error);
   }
 };
 
-
 //Get Most Active Members
 
-import BorrowingRecord from '../models/BorrowingRecord.js';
-import asyncHandler from '../middleware/asyncHandler.js';
+export const getMostActiveMembers = async (req, res, next) => {
+  try {
+    const limit = parseInt(req.query.limit) || 10;
 
-export const getMostActiveMembers = asyncHandler(async (req, res) => {
-  const limit = parseInt(req.query.limit) || 10;
+    const results = await BorrowingRecord.aggregate([
+      {
+        $group: {
+          _id: "$user",
+          borrowCount: { $sum: 1 },
+        },
+      },
+      {
+        $sort: { borrowCount: -1 },
+      },
+      {
+        $limit: limit,
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "_id",
+          foreignField: "_id",
+          as: "userDetails",
+        },
+      },
+      {
+        $unwind: "$userDetails",
+      },
+      {
+        $project: {
+          _id: 0,
+          userId: "$_id",
+          name: "$userDetails.name",
+          email: "$userDetails.email",
+          borrowCount: 1,
+        },
+      },
+    ]);
 
-  const results = await BorrowingRecord.aggregate([
-    {
-      $group: {
-        _id: '$user',
-        borrowCount: { $sum: 1 }
-      }
-    },
-    {
-      $sort: { borrowCount: -1 }
-    },
-    {
-      $limit: limit
-    },
-    {
-      $lookup: {
-        from: 'users',
-        localField: '_id',
-        foreignField: '_id',
-        as: 'userDetails'
-      }
-    },
-    {
-      $unwind: '$userDetails'
-    },
-    {
-      $project: {
-        _id: 0,
-        userId: '$_id',
-        name: '$userDetails.name',
-        email: '$userDetails.email',
-        borrowCount: 1
-      }
-    }
-  ]);
+    res.status(200).json({
+      success: true,
+      count: results.length,
+      data: results,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 
-  res.status(200).json({
-    success: true,
-    count: results.length,
-    data: results
-  });
-});
+// Book Availability Report
 
+export const getBookAvailabilityReport = async (req, res, next) => {
+  try {
+    const bookStats = await Book.aggregate([
+      {
+        $group: {
+          _id: null,
+          totalBooks: { $sum: 1 },
+          totalCopies: { $sum: "$copies" },
+          availableCopies: { $sum: "$availableCopies" },
+        },
+      },
+    ]);
 
+    const {
+      totalBooks = 0,
+      totalCopies = 0,
+      availableCopies = 0,
+    } = bookStats[0] || {};
+
+    const borrowedBooksCount = await BorrowingRecord.countDocuments({
+      status: "borrowed",
+    });
+
+    res.status(200).json({
+      success: true,
+      data: {
+        totalBooks,
+        totalCopies,
+        borrowedBooks: borrowedBooksCount,
+        availableCopies,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};

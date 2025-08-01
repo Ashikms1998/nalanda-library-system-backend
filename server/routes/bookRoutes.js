@@ -1,6 +1,6 @@
 import express from 'express'
 import { authorize, protect } from '../middleware/authMiddleware.js';
-import { addNewBook, deleteBook, getBooks, getMostActiveMembers, getMostBorrowedBooks, updateBookById } from '../controllers/bookRoutesControllers.js';
+import { addNewBook, deleteBook, getBookAvailabilityReport, getBooks, getMostActiveMembers, getMostBorrowedBooks, updateBookById } from '../controllers/bookRoutesControllers.js';
 import { addBookValidationRules, updateBookValidationRules } from '../middleware/bookValidation.js';
 const router = express.Router()
 
@@ -12,5 +12,5 @@ router.delete('/:id', protect, authorize('admin'), deleteBook);
 
 router.get('/most-borrowed', protect, authorize('admin'), getMostBorrowedBooks);
 router.get('/most-active-members', protect, authorize('admin'), getMostActiveMembers);
-
+router.get('/book-availability', protect, authorize('admin'), getBookAvailabilityReport);
 export default router;
