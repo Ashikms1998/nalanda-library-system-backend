@@ -5,12 +5,12 @@ import { addBookValidationRules, updateBookValidationRules } from '../middleware
 const router = express.Router()
 
 router.get('/',protect,getBooks)
-router.post('/addnewbook',protect,authorize('admin'),addBookValidationRules,addNewBook)
-router.put('/books/:id',protect,authorize('admin'),updateBookValidationRules,updateBookById);
-router.delete('/:id', protect, authorize('admin'), deleteBook);
+router.post('/addnewbook',protect,authorize('Admin'),addBookValidationRules,addNewBook)
+router.put('/:id',protect,authorize('Admin'),updateBookValidationRules,updateBookById);
+router.delete('/:id', protect, authorize('Admin'), deleteBook);
 
 
-router.get('/most-borrowed', protect, authorize('admin'), getMostBorrowedBooks);
-router.get('/most-active-members', protect, authorize('admin'), getMostActiveMembers);
-router.get('/book-availability', protect, authorize('admin'), getBookAvailabilityReport);
+router.get('/most-borrowed', protect, authorize('Admin'), getMostBorrowedBooks);
+router.get('/most-active-members', protect, authorize('Admin'), getMostActiveMembers);
+router.get('/book-availability', protect, authorize('Admin'), getBookAvailabilityReport);
 export default router;
