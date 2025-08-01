@@ -1,4 +1,4 @@
-import { borrowBook } from "../services/borrowService.js";
+import { borrowBook } from "../services/borrowServices.js";
 import BorrowingRecord from "../models/BorrowingRecord.js";
 import Book from "../models/Book.js";
 import { errorHandler } from "../utils/error.js";
