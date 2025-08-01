@@ -117,3 +117,56 @@ export const getMostBorrowedBooks = async (req, res, next) => {
     next(error);
   }
 };
+
+
+//Get Most Active Members
+
+import BorrowingRecord from '../models/BorrowingRecord.js';
+import asyncHandler from '../middleware/asyncHandler.js';
+
+export const getMostActiveMembers = asyncHandler(async (req, res) => {
+  const limit = parseInt(req.query.limit) || 10;
+
+  const results = await BorrowingRecord.aggregate([
+    {
+      $group: {
+        _id: '$user',
+        borrowCount: { $sum: 1 }
+      }
+    },
+    {
+      $sort: { borrowCount: -1 }
+    },
+    {
+      $limit: limit
+    },
+    {
+      $lookup: {
+        from: 'users',
+        localField: '_id',
+        foreignField: '_id',
+        as: 'userDetails'
+      }
+    },
+    {
+      $unwind: '$userDetails'
+    },
+    {
+      $project: {
+        _id: 0,
+        userId: '$_id',
+        name: '$userDetails.name',
+        email: '$userDetails.email',
+        borrowCount: 1
+      }
+    }
+  ]);
+
+  res.status(200).json({
+    success: true,
+    count: results.length,
+    data: results
+  });
+});
+
+
